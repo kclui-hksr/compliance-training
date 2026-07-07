@@ -20,7 +20,7 @@
     .step { display: none; }
     .active { display: block; }
     
-    /* 16:9 手機響應式防爆版面 */
+    /* 16:9 手機響應式版面 */
     .video-container { 
       position: relative; 
       width: 100%; 
@@ -42,17 +42,15 @@
       border: none; 
     }
 
-    /* 根據要求優化：字體更細小、遠離影片片段 */
     .timer-info { 
       color: #65676b; 
       font-weight: normal; 
       padding: 8px; 
-      margin-top: 40px; /* 大幅拉開與影片的物理距離 */
-      font-size: 13px;  /* 字體細小化 */
+      margin-top: 40px; 
+      font-size: 13px;  
       letter-spacing: 0.5px;
     }
     
-    /* 第一頁指定的特定紅字指引文字 */
     .instruction-text { margin-top: 40px; padding: 15px; border-top: 1px solid #eee; color: #d93025; font-weight: bold; font-size: 15px; line-height: 1.6; }
   </style>
 
@@ -70,7 +68,6 @@
     <input type="text" id="staffName" placeholder="員工姓名 (Full Name)" required><br>
     <button class="btn" onclick="startFlow()">確認及進入培訓</button>
     
-    <!-- 您指定的原版指引文字 -->
     <div class="instruction-text">
       整個培訓內容約16分鐘，在整個片段播放完成後，<br>
       才正式生成培訓記錄。
@@ -87,7 +84,7 @@
     </div>
     
     <div id="timerDisplay" class="timer-info">
-      剩餘觀看時間：<span id="countdown">16:25</span>
+      剩餘觀看時間：<span id="countdown">16:10</span>
     </div>
   </div>
 
@@ -102,7 +99,7 @@
 <script>
   let staffId = "";
   let staffName = "";
-  let totalDuration = 971; // 16分11秒 = 971秒
+  let totalDuration = 970; // 預設 16分10秒 = 970秒
   let maxTimeWatched = 0;   
   let player;
   let checkInterval;
@@ -124,7 +121,7 @@
   }
 
   function onPlayerReady(event) {
-    totalDuration = Math.floor(player.getDuration()) || 971;
+    totalDuration = Math.floor(player.getDuration()) || 970;
   }
 
   function startFlow() {
@@ -148,8 +145,9 @@
     if (event.data == YT.PlayerState.PLAYING) {
       checkInterval = setInterval(function() {
         let currentTime = player.getCurrentTime();
+        let duration = Math.floor(player.getDuration()) || totalDuration;
         
-        // 防快進作弊監控
+        // 防快進作弊監控：若拖動進度條超過已看過的最大時間點就強制彈回
         if (currentTime > maxTimeWatched + 2) {
           player.seekTo(maxTimeWatched, true); 
           alert("為確保培訓成效，請勿快進跳過影片內容！");
@@ -159,8 +157,8 @@
           }
         }
         
-        // 更新倒數時間
-        let timeLeft = totalDuration - Math.floor(currentTime);
+        // 實時計算剩餘時間
+        let timeLeft = duration - Math.floor(currentTime);
         if (timeLeft < 0) timeLeft = 0;
         
         let mins = Math.floor(timeLeft / 60);
@@ -172,14 +170,13 @@
     } else {
       clearInterval(checkInterval);
       
-      // 當影片正常播完
-      if (event.data == YT.PlayerState.ENDED && maxTimeWatched >= totalDuration - 5) {
+      // 💡 終極修復核心：只要 YouTube 判定影片播完 (ENDED)，就立即 100% 信任並觸發自動同步！
+      if (event.data == YT.PlayerState.ENDED) {
         autoSubmitToGoogleSheet();
       }
     }
   }
 
-  // GitHub Pages 專用的跨網域自動提交機制
   function autoSubmitToGoogleSheet() {
     clearInterval(checkInterval);
     
@@ -188,7 +185,7 @@
     timerDiv.style.color = "#188038";
     timerDiv.style.fontSize = "15px";
     
-    // 💡 修正處：已移除中括號亂碼，確保網址完全正確
+    // 您的專屬 Google apps script 後台網址
     const webAppUrl = "https://script.google.com/macros/s/AKfycbww7iauIoltNo7B30y-EUqbAn8ChgefDXeoKSkTREyrP2Whw15C7QJbHkxx-x9I_xml/exec"; 
     
     let details = { 'staffId': staffId, 'staffName': staffName };
